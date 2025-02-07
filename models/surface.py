@@ -3,12 +3,15 @@ from typing import Any
 
 import numpy as np
 import sympy
-from sympy import diff
+from sympy import diff, simplify, lambdify
 from sympy.solvers import solve
 
 from ray import Ray
 from sympy.abc import x, y, z, a, b, c, t
 from enum import Enum
+from scipy.optimize import root_scalar
+
+from utils import multi_root
 
 min_ray_fly_distance = 0.001
 
@@ -27,10 +30,10 @@ class SurfaceEquation:
                                                   (y, ray.point[1] + ray.vector[1] * t),
                                                   (z, ray.point[2] + ray.vector[2] * t)])
         if substituted.is_zero: return ray.point + ray.vector * min_ray_fly_distance
-        results = solve(substituted, t)
+        expr_function = lambdify(t, simplify(substituted, rational=True))
+        results = multi_root(expr_function, (min_ray_fly_distance, 1e5), 5)
         intersection = None
         for r in results:
-            if not r.is_real: continue
             r = float(r)
             if r >= min_ray_fly_distance:
                 intersection = ray.point + ray.vector * r

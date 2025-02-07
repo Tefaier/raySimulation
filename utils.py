@@ -1,6 +1,8 @@
 import math
+from typing import Callable
 
 import numpy as np
+from scipy.optimize import root_scalar
 
 from scipy.spatial.transform import Rotation
 
@@ -68,3 +70,44 @@ def rotationToVector(vecFrom: np.array, vecTo: np.array) -> Rotation:
     kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
     return Rotation.from_matrix(rotation_matrix)
+
+# based on https://gist.github.com/maxiimilian/67113eb1d60a5d8ceca212fbcad100c9
+def multi_root(f: Callable, bracket: (float, float), n: int = 30) -> np.ndarray:
+    x = np.linspace(*bracket, n)
+    y = [f(arg) for arg in x]
+
+    # Find where adjacent signs are not equal
+    sign_changes = np.where(np.sign(y[:-1]) != np.sign(y[1:]))[0]
+
+    # Find roots around sign changes
+    root_finders = (
+        root_scalar(
+            f=f,
+            bracket=(x[s], x[s+1])
+        )
+        for s in sign_changes
+    )
+
+    roots = np.array([
+        r.root if r.converged else np.nan
+        for r in root_finders
+    ])
+
+    if np.any(np.isnan(roots)):
+        roots = roots[~np.isnan(roots)]
+
+    roots_unique = np.unique(roots)
+    if len(roots_unique) == 0:
+        root_finders = (root_scalar(f=f, x0=x0) for x0 in x)
+        roots = np.array([
+            r.root if r.converged else np.nan
+            for r in root_finders
+        ])
+        if np.any(np.isnan(roots)):
+            roots = roots[~np.isnan(roots)]
+        roots = roots[np.where((bracket[0] <= roots) & (roots <= bracket[1]))]
+        roots = np.sort(roots)
+        roots = roots[np.unique(roots.round(4), return_index=True)[1]]
+        return roots
+
+    return np.unique(roots)
