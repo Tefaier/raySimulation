@@ -1,3 +1,4 @@
+import math
 from typing import Any
 
 import numpy as np
@@ -25,9 +26,12 @@ class SurfaceEquation:
         substituted = self.surface_equation.subs([(x, ray.point[0] + ray.vector[0] * t),
                                                   (y, ray.point[1] + ray.vector[1] * t),
                                                   (z, ray.point[2] + ray.vector[2] * t)])
+        if substituted.is_zero: return ray.point + ray.vector * min_ray_fly_distance
         results = solve(substituted, t)
         intersection = None
         for r in results:
+            if not r.is_real: continue
+            r = float(r)
             if r >= min_ray_fly_distance:
                 intersection = ray.point + ray.vector * r
                 for limitation in self.surface_limitations:
@@ -48,25 +52,65 @@ class SurfaceEquation:
         return result / normal_length if normal_length > 0 else None
 
 
-class SurfaceTypes(Enum):
-    Coloured = 0,
-    Refraction = 1,
-    Reflection = 2
-
-
 class Surface:
-    refraction_index_outside: float
-    refraction_index_inside: float
-
     equations_of_parts: list[SurfaceEquation]
 
-    def __init__(self,
-                 equations_of_parts: list[SurfaceEquation],
-                 refraction_index_outside: float,
-                 refraction_index_inside: float):
+    def __init__(self, equations_of_parts: list[SurfaceEquation]):
         self.equations_of_parts = equations_of_parts
-        self.refraction_index_outside = refraction_index_outside
-        self.refraction_index_inside = refraction_index_inside
 
-    def determine_intersection(self, with_ray: Ray) -> Ray:
+    def determine_intersection(self, with_ray: Ray) -> Ray | None:
+        first_distance = 0
+        first_intersection = None
+        first_surface = None
+        for surface in self.equations_of_parts:
+            intersection = surface.eval_ray(with_ray)
+            length = np.linalg.norm(intersection - with_ray.point)
+            if intersection is not None and (first_intersection is None or first_distance > length):
+                first_intersection = intersection
+                first_distance = length
+                first_surface = surface
+        if first_intersection is None: return None
+        normal = first_surface.get_normal_at_point(first_intersection)
+        return self.build_new_ray(with_ray, first_intersection, normal)
+
+    def build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
         pass
+
+
+class ReflectionSurface(Surface):
+    reflection_coefficient: float
+
+    def __init__(self, equations_of_parts: list[SurfaceEquation], reflection_coefficient: float):
+        super().__init__(equations_of_parts)
+        self.reflection_coefficient = reflection_coefficient
+
+    def build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
+        return None
+
+
+class RefractionSurface(Surface):
+    refractive_index_outside: float
+    refractive_index_inside: float
+    critical_angle: float
+
+    def __init__(self, equations_of_parts: list[SurfaceEquation], refractive_index_outside: float, refractive_index_inside: float):
+        super().__init__(equations_of_parts)
+        self.refractive_index_outside = refractive_index_outside
+        self.refractive_index_inside = refractive_index_inside
+        self.critical_angle = math.asin(min(refractive_index_outside, refractive_index_inside) / max(refractive_index_outside, refractive_index_inside))
+
+    def build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
+        return None
+
+
+class SolidSurface(Surface):
+    color: list[float]
+    brightness: float
+
+    def __init__(self, equations_of_parts: list[SurfaceEquation], color: list[float], brightness: float):
+        super().__init__(equations_of_parts)
+        self.color = color
+        self.brightness = brightness
+
+    def build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
+        return None
