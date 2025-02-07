@@ -9,6 +9,7 @@ class Ray:
     color_mask: list[float]  # from 0 to 1 for RGB
     finished: bool  # true when ray hit
     total_fly_distance: float  # if finished it will show total path length
+    final_color: list[float]  # from 0 to 1 for RGB, determined after finished becomes True
 
     def __init__(self, point: np.array, vector: np.array):
         self.point = point
