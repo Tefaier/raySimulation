@@ -2,22 +2,19 @@ import math
 from typing import Any
 
 import numpy as np
-import sympy
 from scipy.spatial.transform import Rotation
 from sympy import diff, simplify, lambdify
-from sympy.solvers import solve
 
-from ray import Ray
-from sympy.abc import x, y, z, a, b, c, t
-from enum import Enum
-from scipy.optimize import root_scalar
+from models.ray import Ray
+from sympy.abc import x, y, z, t
 
 from utils import multi_root, rotationToVector
 
 min_ray_fly_distance = 0.001
 
 # surface_equation is checked to be 0 at coordinates
-# surface_limitations are checked to be negative all
+# surface_limitations are checked to be <= 0 ALL!
+# normal of equation is in direction of gradient at point
 class SurfaceEquation:
     surface_equation: Any
     surface_limitations: list[Any]
@@ -26,7 +23,7 @@ class SurfaceEquation:
         self.surface_equation = equation
         self.surface_limitations = limitations
 
-    def eval_ray(self, ray: Ray) -> np.array | None:
+    def eval_ray(self, ray: Ray) -> np.array:
         substituted = self.surface_equation.subs([(x, ray.point[0] + ray.vector[0] * t),
                                                   (y, ray.point[1] + ray.vector[1] * t),
                                                   (z, ray.point[2] + ray.vector[2] * t)])
@@ -69,18 +66,13 @@ class Surface:
         first_surface_index = None
         for index, surface in enumerate(self.equations_of_parts):
             intersection = surface.eval_ray(with_ray)
-            length = np.linalg.norm(intersection - with_ray.point)
+            length = np.linalg.norm(intersection - with_ray.point) if intersection is not None else 0
             if intersection is not None and (first_intersection is None or first_distance > length):
                 first_intersection = intersection
                 first_distance = length
                 first_surface_index = index
-        if first_intersection is None: return (-1, -1)
-        return (first_distance, first_surface_index)
-        normal = first_surface.get_normal_at_point(first_intersection)
-        if normal is None:
-            with_ray.point = first_intersection
-            return with_ray
-        return self._build_new_ray(with_ray, first_intersection, normal)
+        if first_intersection is None: return -1, -1
+        return first_distance, first_surface_index
 
     def effect_ray(self, ray: Ray, fly_distance: np.array, surface_eq_index: int) -> Ray:
         touch_point = ray.point + ray.vector * fly_distance

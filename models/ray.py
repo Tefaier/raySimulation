@@ -19,3 +19,6 @@ class Ray:
         self.color_mask = np.array([1.0, 1.0, 1.0])
         self.finished = False
         self.total_fly_distance = 0
+
+    def __str__(self):
+        return f"[{round(self.point[0], 3)}, {round(self.point[1], 3)}, {round(self.point[2], 3)}] in direction [{round(self.vector[0], 3)}, {round(self.vector[1], 3)}, {round(self.vector[2], 3)}]\nHit count: {self.hit_count}\nLight level: {self.light_level}\nFinished: {self.finished}"
