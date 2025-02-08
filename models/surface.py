@@ -62,25 +62,35 @@ class Surface:
     def __init__(self, equations_of_parts: list[SurfaceEquation]):
         self.equations_of_parts = equations_of_parts
 
-    def determine_intersection(self, with_ray: Ray) -> Ray | None:
+    # returns distance to first intersection, and index of surface equation that intersected
+    def determine_intersection(self, with_ray: Ray) -> (float, int):
         first_distance = 0
         first_intersection = None
-        first_surface = None
-        for surface in self.equations_of_parts:
+        first_surface_index = None
+        for index, surface in enumerate(self.equations_of_parts):
             intersection = surface.eval_ray(with_ray)
             length = np.linalg.norm(intersection - with_ray.point)
             if intersection is not None and (first_intersection is None or first_distance > length):
                 first_intersection = intersection
                 first_distance = length
-                first_surface = surface
-        if first_intersection is None: return None
+                first_surface_index = index
+        if first_intersection is None: return (-1, -1)
+        return (first_distance, first_surface_index)
         normal = first_surface.get_normal_at_point(first_intersection)
         if normal is None:
             with_ray.point = first_intersection
             return with_ray
-        return self.build_new_ray(with_ray, first_intersection, normal)
+        return self._build_new_ray(with_ray, first_intersection, normal)
 
-    def build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
+    def effect_ray(self, ray: Ray, fly_distance: np.array, surface_eq_index: int) -> Ray:
+        touch_point = ray.point + ray.vector * fly_distance
+        normal = self.equations_of_parts[surface_eq_index].get_normal_at_point(touch_point)
+        if normal is None:
+            ray.point = touch_point
+            return ray
+        return self._build_new_ray(ray, touch_point, normal)
+
+    def _build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
         pass
 
 
@@ -91,7 +101,7 @@ class ReflectionSurface(Surface):
         super().__init__(equations_of_parts)
         self.reflection_coefficient = reflection_coefficient
 
-    def build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
+    def _build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
         new_vector = from_ray.vector * -1
         rot_to_normal = rotationToVector(new_vector, touch_normal)
         new_vector = rot_to_normal.apply(rot_to_normal.apply(new_vector))
@@ -113,7 +123,7 @@ class RefractionSurface(Surface):
         self.refractive_index_inside = refractive_index_inside
         self.critical_angle = math.asin(min(refractive_index_outside, refractive_index_inside) / max(refractive_index_outside, refractive_index_inside))
 
-    def build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
+    def _build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
         cos = np.cos(from_ray.vector, touch_normal)
         sin_multiplier = 0
         if cos > 0:  # hits surface from inside
@@ -149,15 +159,15 @@ class RefractionSurface(Surface):
 
 
 class SolidSurface(Surface):
-    color: list[float]
+    color: np.array
     brightness: float
 
-    def __init__(self, equations_of_parts: list[SurfaceEquation], color: list[float], brightness: float):
+    def __init__(self, equations_of_parts: list[SurfaceEquation], color: np.array, brightness: float):
         super().__init__(equations_of_parts)
         self.color = color
         self.brightness = brightness
 
-    def build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
+    def _build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
         ray = Ray(touch_point, from_ray.vector)
         ray.hit_count = from_ray.hit_count + 1
         ray.total_fly_distance = from_ray.total_fly_distance + np.linalg.norm(touch_point - from_ray.point)
@@ -166,9 +176,11 @@ class SolidSurface(Surface):
         cos = np.cos(from_ray.vector, touch_normal)
         angle_to_perp = math.acos(cos)
         angle_to_perp = angle_to_perp if angle_to_perp > math.pi / 2 else math.pi - angle_to_perp
-        self.determine_final_color(ray, angle_to_perp)
+        self._determine_final_color(ray, angle_to_perp)
         return ray
 
-    def determine_final_color(self, ray: Ray, fall_angle: float):
-        # TODO
-        ray.final_color = [1, 1, 1]
+    # fall angle is an angle between ray and normal in radians
+    def _determine_final_color(self, ray: Ray, fall_angle: float):
+        fall_brigntness = np.cos(fall_angle)
+        final_brigntness = fall_brigntness * ray.light_level
+        ray.final_color = self.color * ray.color_mask * final_brigntness

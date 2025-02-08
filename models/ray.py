@@ -6,7 +6,7 @@ class Ray:
     vector: np.array  # directional vector, normalised
     hit_count: int  # number of hits experienced
     light_level: float  # from 0 to 1 for how much brightness is left
-    color_mask: list[float]  # from 0 to 1 for RGB
+    color_mask: np.array  # from 0 to 1 for RGB
     finished: bool  # true when ray hit
     total_fly_distance: float  # if finished it will show total path length
     final_color: list[float]  # from 0 to 1 for RGB, determined after finished becomes True
@@ -16,6 +16,6 @@ class Ray:
         self.vector = vector / np.linalg.norm(vector)
         self.hit_count = 0
         self.light_level = 1.0
-        self.color_mask = [1.0, 1.0, 1.0]
+        self.color_mask = np.array([1.0, 1.0, 1.0])
         self.finished = False
         self.total_fly_distance = 0
