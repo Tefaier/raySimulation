@@ -116,7 +116,7 @@ class RefractionSurface(Surface):
         self.critical_angle = math.asin(min(refractive_index_outside, refractive_index_inside) / max(refractive_index_outside, refractive_index_inside))
 
     def _build_new_ray(self, from_ray: Ray, touch_point: np.array, touch_normal: np.array) -> Ray:
-        cos = np.cos(from_ray.vector, touch_normal)
+        cos = np.dot(from_ray.vector, touch_normal)  # touch_normal length is expected to be 1!
         sin_multiplier = 0
         if cos > 0:  # hits surface from inside
             sin_multiplier = self.refractive_index_inside / self.refractive_index_outside

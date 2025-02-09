@@ -36,8 +36,8 @@ def get_cube_equations(center_at: np.array, side_length: float) -> list[SurfaceE
         z - center_at[2] - side_length / 2,
         [y - center_at[1] - side_length / 2,
          -y - center_at[1] - side_length / 2,
-         z - center_at[2] - side_length / 2,
-         -z - center_at[2] - side_length / 2]))
+         x - center_at[0] - side_length / 2,
+         -x - center_at[0] - side_length / 2]))
     equations.append(SurfaceEquation(
         -z - center_at[2] - side_length / 2,
         [y - center_at[1] - side_length / 2,
