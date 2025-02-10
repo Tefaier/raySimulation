@@ -165,7 +165,8 @@ class SolidSurface(Surface):
         ray.total_fly_distance = from_ray.total_fly_distance + np.linalg.norm(touch_point - from_ray.point)
         ray.light_level = from_ray.light_level
         ray.finished = True
-        cos = np.cos(from_ray.vector, touch_normal)
+        # cos = np.cos(from_ray.vector, touch_normal)
+        cos = np.dot(from_ray.vector, touch_normal) / np.linalg.norm(from_ray.vector) / np.linalg.norm(touch_normal)
         angle_to_perp = math.acos(cos)
         angle_to_perp = angle_to_perp if angle_to_perp > math.pi / 2 else math.pi - angle_to_perp
         self._determine_final_color(ray, angle_to_perp)
