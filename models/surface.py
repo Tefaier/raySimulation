@@ -1,6 +1,6 @@
 import math
 from enum import Enum
-from typing import Callable
+from typing import Callable, Tuple
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -12,7 +12,7 @@ from sympy import Poly
 
 from utils import rotationToVector
 
-min_ray_fly_distance = 0.001
+min_ray_fly_distance = 1e-6
 
 # surface_equation is checked to be 0 at coordinates
 # surface_limitations are checked to be <= 0 ALL!
@@ -24,9 +24,9 @@ class SurfaceEquation:
 
     equation_type: EquationType
     _solver: Callable[[Ray], float]
-    _ray_to_polynom: Callable[[float, float, float, float, float, float], np.array] # may be None depending on the equation
+    _ray_to_polynom: Callable[[float, float, float, float, float, float], list[float]] # may be None depending on the equation
     _equation_params: list[float] # may be None depending on the equation
-    _surface_normal: Callable[[float, float, float], (float, float, float)]
+    _surface_normal: Callable[[float, float, float], Tuple[float, float, float]]
     _surface_limitations: list[Callable[[float, float, float], float]]
 
     def __init__(self, equation_type: EquationType, equation, limitations: list):
@@ -38,7 +38,7 @@ class SurfaceEquation:
 
         if equation_type in [self.EquationType.Sphere, self.EquationType.Plane]:
             ax, bx, ay, by, az, bz = symbols('ax, bx, ay, by, az, bz')
-            coef_lambdas = [lambdify([ax, bx, ay, by, az, bz], coef_equation) for coef_equation in Poly(equation.subs([(x, ax + bx * t), (y, ay + by * t), (z, ay + by * t)]), t).all_coeffs()]
+            coef_lambdas = [lambdify([ax, bx, ay, by, az, bz], coef_equation) for coef_equation in Poly(equation.subs([(x, ax + bx * t), (y, ay + by * t), (z, az + bz * t)]), t).all_coeffs()]
             self._ray_to_polynom = lambda px, vx, py, vy, pz, vz: [coef_lambda(px, vx, py, vy, pz, vz) for coef_lambda in coef_lambdas]
         else:
             self._equation_params = equation
@@ -139,7 +139,7 @@ class RefractionSurface(Surface):
         else:  # hits surface from outside
             sin_multiplier = self.refractive_index_outside / self.refractive_index_inside
         angle_to_perp = math.acos(cos)
-        angle_to_perp = angle_to_perp if angle_to_perp > math.pi / 2 else math.pi - angle_to_perp
+        angle_to_perp = angle_to_perp if angle_to_perp < math.pi / 2 else math.pi - angle_to_perp
         new_sin_value = math.sin(angle_to_perp) * sin_multiplier
         if new_sin_value > 1.0:  # for now it fully reflects inside after critical angle
             new_vector = from_ray.vector * -1
@@ -192,5 +192,5 @@ class SolidSurface(Surface):
     # fall angle is an angle between ray and normal in radians
     def _determine_final_color(self, ray: Ray, fall_angle: float):
         fall_brigntness = np.cos(fall_angle)
-        final_brigntness = fall_brigntness * ray.light_level
+        final_brigntness = fall_brigntness * ray.light_level * self.brightness
         ray.final_color = self.color * ray.color_mask * final_brigntness

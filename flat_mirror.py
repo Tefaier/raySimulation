@@ -21,27 +21,27 @@ class Camera:
         normal *= np.linalg.norm(self.A - self.D) / 2 / np.tan(np.radians(width_fov / 2))
         self.fov_pos = center + normal
 
-width = 120
-height = 120
-step_x = step_y = 3
+width = 400
+height = 400
+step_x = step_y = 1
 screen = pygame.display.set_mode((width, height))
 p_bar = tqdm(range(int(width * height / step_x / step_y)))
 
 dist_to_mirror = 1
 camera = Camera(np.array([-0.5, -0.5, dist_to_mirror], dtype=float),
                 np.array([-0.5, 0.5, dist_to_mirror]),
-                np.array([0.5, 0.5, dist_to_mirror]), 30)  # change angle of view
+                np.array([0.5, 0.5, dist_to_mirror]), 90)  # change angle of view
 surfaces = []
 mirror_side = 3
-surfaces.append(RefractionSurface(get_cube_equations(np.array([0.5, 0, 0]), 1.5), 1, 1.4))
+surfaces.append(RefractionSurface(get_cube_equations(np.array([0.013, 0, 0.4]), 0.7), 1, 1.4))
 # surfaces.append(RefractionSurface([SurfaceEquation(True, z+x,[])], 1, 2.4))
 # surfaces.append(RefractionSurface([SurfaceEquation(True, z-1,[y - mirror_side, -y - mirror_side, x - mirror_side, -x - mirror_side])], 1, 1.4))
 # surfaces.append(SolidSurface([SurfaceEquation(True, -z+100,[])], np.array([1, 1, 1]), 0.05))
 
 # surfaces.append(SolidSurface(get_cube_equations(np.array([0, 0, 80]), 2), 1, 100))
 # surfaces.append(SolidSurface(get_triangle_equation(np.array([-5, 0, 40]), np.array([0, 5, 40]), np.array([5, 0, 40])), 1, 100))
-# surfaces.append(SolidSurface(get_sphere_equations(np.array([0, 0, 2]), 1), np.array([1, 1, 0]), 1))
-surfaces.append(SolidSurface(get_sphere_equations(np.array([0, 0, 0]), 0.2), np.array([1, 0, 1]), 1))
+surfaces.append(SolidSurface(get_sphere_equations(np.array([0, 0, 0]), 100), np.array([1, 1, 1]), 0.2))
+surfaces.append(SolidSurface(get_sphere_equations(np.array([0.2, 0, -0.5]), 0.3), np.array([1, 0, 1]), 1))
 
 def cast_ray(ray: Ray):
     _, ray = shoot_ray(surfaces, ray, 10)
@@ -74,7 +74,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-    pygame.image.save(screen, "mirror+inner.png")
+    pygame.image.save(screen, "mirror+inner_1.png")
 
     pygame.display.flip()
     clock.tick(240)
