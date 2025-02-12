@@ -1,14 +1,16 @@
 import math
-from typing import Any
+from enum import Enum
+from typing import Callable
 
 import numpy as np
 from scipy.spatial.transform import Rotation
-from sympy import diff, simplify, lambdify
+from sympy import diff, simplify, lambdify, symbols
 
 from models.ray import Ray
 from sympy.abc import x, y, z, t
+from sympy import Poly
 
-from utils import multi_root, rotationToVector
+from utils import rotationToVector
 
 min_ray_fly_distance = 0.001
 
@@ -16,41 +18,58 @@ min_ray_fly_distance = 0.001
 # surface_limitations are checked to be <= 0 ALL!
 # normal of equation is in direction of gradient at point
 class SurfaceEquation:
-    surface_equation: Any
-    surface_limitations: list[Any]
+    class EquationType(Enum):
+        Sphere = 0,
+        Plane = 1,
 
-    def __init__(self, equation, limitations):
-        self.surface_equation = equation
-        self.surface_limitations = limitations
+    equation_type: EquationType
+    _solver: Callable[[Ray], float]
+    _ray_to_polynom: Callable[[float, float, float, float, float, float], np.array] # may be None depending on the equation
+    _equation_params: list[float] # may be None depending on the equation
+    _surface_normal: Callable[[float, float, float], (float, float, float)]
+    _surface_limitations: list[Callable[[float, float, float], float]]
 
-    def eval_ray(self, ray: Ray) -> np.array:
-        substituted = self.surface_equation.subs([(x, ray.point[0] + ray.vector[0] * t),
-                                                  (y, ray.point[1] + ray.vector[1] * t),
-                                                  (z, ray.point[2] + ray.vector[2] * t)])
-        if substituted.is_zero: return ray.point + ray.vector * min_ray_fly_distance
-        expr_function = lambdify(t, simplify(substituted, rational=True))
-        results = multi_root(expr_function, (min_ray_fly_distance, 1e5), 5)
-        intersection = None
-        for r in results:
-            r = float(r)
-            if r >= min_ray_fly_distance:
-                intersection = ray.point + ray.vector * r
-                for limitation in self.surface_limitations:
-                    if limitation.subs([(x, intersection[0]), (y, intersection[1]), (z, intersection[2])]) > 0:
-                        intersection = None
-                        break
-                if intersection is not None:
-                    break
+    def __init__(self, equation_type: EquationType, equation, limitations: list):
+        self.equation_type = equation_type
+        if equation_type == self.EquationType.Sphere:
+            self._solver = self._solve_sphere
+        elif equation_type == self.EquationType.Plane:
+            self._solver = self._solve_plane
 
-        return intersection
+        if equation_type in [self.EquationType.Sphere, self.EquationType.Plane]:
+            ax, bx, ay, by, az, bz = symbols('ax, bx, ay, by, az, bz')
+            coef_lambdas = [lambdify([ax, bx, ay, by, az, bz], coef_equation) for coef_equation in Poly(equation.subs([(x, ax + bx * t), (y, ay + by * t), (z, ay + by * t)]), t).all_coeffs()]
+            self._ray_to_polynom = lambda px, vx, py, vy, pz, vz: [coef_lambda(px, vx, py, vy, pz, vz) for coef_lambda in coef_lambdas]
+        else:
+            self._equation_params = equation
+
+        norm_lambdas = [lambdify([x, y, z], diff(equation, arg)) for arg in [x, y, z]]
+        self._surface_normal = lambda x_val, y_val, z_val: [norm_lambda(x_val, y_val, z_val) for norm_lambda in norm_lambdas]
+        self._surface_limitations = [lambdify([x, y, z], simplify(limitation, rational=True)) for limitation in limitations]
+
+    def eval_ray(self, ray: Ray) -> float:
+        return self._solver(ray)
 
     def get_normal_at_point(self, at_point: np.array) -> np.array:
-        result = np.zeros((3,), dtype=float)
-        result[0] = diff(self.surface_equation, x).subs([(x, at_point[0]), (y, at_point[1]), (z, at_point[2])])
-        result[1] = diff(self.surface_equation, y).subs([(x, at_point[0]), (y, at_point[1]), (z, at_point[2])])
-        result[2] = diff(self.surface_equation, z).subs([(x, at_point[0]), (y, at_point[1]), (z, at_point[2])])
-        normal_length = np.linalg.norm(result)
-        return result / normal_length if normal_length > 0 else None
+        return np.array(self._surface_normal(at_point[0], at_point[1], at_point[2]))
+
+    def _solve_sphere(self, ray: Ray) -> float:
+        return self._solve_by_poly_roots(ray)
+
+    def _solve_plane(self, ray: Ray) -> float:
+        return self._solve_by_poly_roots(ray)
+
+    def _solve_by_poly_roots(self, ray: Ray) -> float:
+        results: np.ndarray = np.roots(
+            self._ray_to_polynom(ray.point[0], ray.vector[0], ray.point[1], ray.vector[1], ray.point[2], ray.vector[2]))
+        results = results.real[abs(results.imag) < 1e-5]
+        results = results[results >= min_ray_fly_distance]
+        results.sort()
+        for result in results:
+            px, py, pz = ray.point + ray.vector * result
+            if all(limit(px, py, pz) < 1e-5 for limit in self._surface_limitations):
+                return result
+        return None
 
 
 class Surface:
@@ -62,16 +81,13 @@ class Surface:
     # returns distance to first intersection, and index of surface equation that intersected
     def determine_intersection(self, with_ray: Ray) -> (float, int):
         first_distance = 0
-        first_intersection = None
         first_surface_index = None
         for index, surface in enumerate(self.equations_of_parts):
             intersection = surface.eval_ray(with_ray)
-            length = np.linalg.norm(intersection - with_ray.point) if intersection is not None else 0
-            if intersection is not None and (first_intersection is None or first_distance > length):
-                first_intersection = intersection
-                first_distance = length
+            if intersection is not None and (first_surface_index is None or first_distance > intersection):
+                first_distance = intersection
                 first_surface_index = index
-        if first_intersection is None: return -1, -1
+        if first_surface_index is None: return -1, -1
         return first_distance, first_surface_index
 
     def effect_ray(self, ray: Ray, fly_distance: np.array, surface_eq_index: int) -> Ray:
@@ -139,7 +155,8 @@ class RefractionSurface(Surface):
                 touch_normal *= -1
             rot_normal_to_ray = rotationToVector(touch_normal, from_ray.vector)
             rot_normal_to_ray = rot_normal_to_ray.as_rotvec(degrees=False)
-            rot_normal_to_ray /= np.linalg.norm(rot_normal_to_ray)
+            if np.linalg.norm(rot_normal_to_ray) != 0:
+                rot_normal_to_ray /= np.linalg.norm(rot_normal_to_ray)
             rot_normal_to_ray *= math.asin(new_sin_value)
             rot_normal_to_ray = Rotation.from_rotvec(rot_normal_to_ray, degrees=False)
             new_vector = rot_normal_to_ray.apply(touch_normal)
@@ -166,9 +183,9 @@ class SolidSurface(Surface):
         ray.light_level = from_ray.light_level
         ray.finished = True
         # cos = np.cos(from_ray.vector, touch_normal)
-        cos = np.dot(from_ray.vector, touch_normal) / np.linalg.norm(from_ray.vector) / np.linalg.norm(touch_normal)
-        angle_to_perp = math.acos(cos)
-        angle_to_perp = angle_to_perp if angle_to_perp > math.pi / 2 else math.pi - angle_to_perp
+        cos = np.dot(from_ray.vector, touch_normal)
+        angle_to_perp = math.acos(max(-1, min(1, cos)))
+        angle_to_perp = angle_to_perp if (angle_to_perp < math.pi / 2) else (math.pi - angle_to_perp)
         self._determine_final_color(ray, angle_to_perp)
         return ray
 
