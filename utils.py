@@ -3,6 +3,8 @@ from typing import Callable
 
 import numpy as np
 from scipy.optimize import root_scalar
+from sympy import symbols
+from sympy.abc import x, y, z
 
 from scipy.spatial.transform import Rotation
 
@@ -111,3 +113,9 @@ def multi_root(f: Callable, bracket: (float, float), n: int = 30) -> np.ndarray:
         return roots
 
     return np.unique(roots)
+
+def apply_rotation_move(equation, move_to: np.array, rotation: Rotation):
+    xn, yn, zn = symbols('xn, yn, zn')
+    new_basis = [rotation.apply([1, 0, 0]), rotation.apply([0, 1, 0]), rotation.apply([0, 0, 1])]
+    new_basis = [xn * base[0] + yn * base[1] + zn * base[2] for base in new_basis]
+    return equation.subs([(x, new_basis[0]), (y, new_basis[1]), (z, new_basis[2])], simultanious=True).subs([(xn, x - move_to[0]), (yn, y - move_to[1]), (zn, z - move_to[2])], simultanious=True)

@@ -1,49 +1,52 @@
+from typing import Tuple
+
 import numpy as np
+from scipy.spatial.transform import Rotation
 from sympy.abc import x, y, z
 
 from models.surface import SurfaceEquation
-from utils import setRotationAngle, rotationToVector
+from utils import setRotationAngle, rotationToVector, apply_rotation_move
 
 
 # dump cube without rotation
-def get_cube_equations(center_at: np.array, side_length: float) -> list[SurfaceEquation]:
+def get_cube_equations(center_at: np.array, side_lengths: Tuple[float, float, float], rotation: Rotation) -> list[SurfaceEquation]:
     equations = []
     equations.append(SurfaceEquation(SurfaceEquation.EquationType.Plane,
-        x - center_at[0] - side_length / 2,
-        [y - center_at[1] - side_length / 2,
-            -y + center_at[1] - side_length / 2,
-            z - center_at[2] - side_length / 2,
-            -z + center_at[2] - side_length / 2]))
+        apply_rotation_move(x - side_lengths[0] / 2, center_at, rotation),
+        [apply_rotation_move(y - side_lengths[1] / 2, center_at, rotation),
+            apply_rotation_move(-y - side_lengths[1] / 2, center_at, rotation),
+            apply_rotation_move(z - side_lengths[2] / 2, center_at, rotation),
+            apply_rotation_move(-z - side_lengths[2] / 2, center_at, rotation)]))
     equations.append(SurfaceEquation(SurfaceEquation.EquationType.Plane,
-        -x + center_at[0] - side_length / 2,
-        [y - center_at[1] - side_length / 2,
-         -y + center_at[1] - side_length / 2,
-         z - center_at[2] - side_length / 2,
-         -z + center_at[2] - side_length / 2]))
+        apply_rotation_move(-x - side_lengths[0] / 2, center_at, rotation),
+        [apply_rotation_move(y - side_lengths[1] / 2, center_at, rotation),
+         apply_rotation_move(-y - side_lengths[1] / 2, center_at, rotation),
+         apply_rotation_move(z - side_lengths[2] / 2, center_at, rotation),
+         apply_rotation_move(-z - side_lengths[2] / 2, center_at, rotation)]))
     equations.append(SurfaceEquation(SurfaceEquation.EquationType.Plane,
-        y - center_at[1] - side_length / 2,
-        [x - center_at[0] - side_length / 2,
-         -x + center_at[0] - side_length / 2,
-         z - center_at[2] - side_length / 2,
-         -z + center_at[2] - side_length / 2]))
+        apply_rotation_move(y - side_lengths[1] / 2, center_at, rotation),
+        [apply_rotation_move(x - side_lengths[0] / 2, center_at, rotation),
+         apply_rotation_move(-x - side_lengths[0] / 2, center_at, rotation),
+         apply_rotation_move(z - side_lengths[2] / 2, center_at, rotation),
+         apply_rotation_move(-z - side_lengths[2] / 2, center_at, rotation)]))
     equations.append(SurfaceEquation(SurfaceEquation.EquationType.Plane,
-        -y + center_at[1] - side_length / 2,
-        [x - center_at[0] - side_length / 2,
-         -x + center_at[0] - side_length / 2,
-         z - center_at[2] - side_length / 2,
-         -z + center_at[2] - side_length / 2]))
+        apply_rotation_move(-y - side_lengths[1] / 2, center_at, rotation),
+        [apply_rotation_move(x - side_lengths[0] / 2, center_at, rotation),
+         apply_rotation_move(-x - side_lengths[0] / 2, center_at, rotation),
+         apply_rotation_move(z - side_lengths[2] / 2, center_at, rotation),
+         apply_rotation_move(-z - side_lengths[2] / 2, center_at, rotation)]))
     equations.append(SurfaceEquation(SurfaceEquation.EquationType.Plane,
-        z - center_at[2] - side_length / 2,
-        [y - center_at[1] - side_length / 2,
-         -y + center_at[1] - side_length / 2,
-         x - center_at[0] - side_length / 2,
-         -x + center_at[0] - side_length / 2]))
+        apply_rotation_move(z - side_lengths[2] / 2, center_at, rotation),
+        [apply_rotation_move(y - side_lengths[1] / 2, center_at, rotation),
+         apply_rotation_move(-y - side_lengths[1] / 2, center_at, rotation),
+         apply_rotation_move(x - side_lengths[0] / 2, center_at, rotation),
+         apply_rotation_move(-x - side_lengths[0] / 2, center_at, rotation)]))
     equations.append(SurfaceEquation(SurfaceEquation.EquationType.Plane,
-        -z + center_at[2] - side_length / 2,
-        [y - center_at[1] - side_length / 2,
-         -y + center_at[1] - side_length / 2,
-         x - center_at[0] - side_length / 2,
-         -x + center_at[0] - side_length / 2]))
+        apply_rotation_move(-z - side_lengths[2] / 2, center_at, rotation),
+        [apply_rotation_move(y - side_lengths[1] / 2, center_at, rotation),
+         apply_rotation_move(-y - side_lengths[1] / 2, center_at, rotation),
+         apply_rotation_move(x - side_lengths[0] / 2, center_at, rotation),
+         apply_rotation_move(-x - side_lengths[0] / 2, center_at, rotation)]))
     return equations
 
 # simple sphere
@@ -69,3 +72,19 @@ def get_triangle_equation(point0: np.array, point1: np.array, point2: np.array) 
         (x - point2[0]) * perp1to20[0] + (y - point2[1]) * perp1to20[1] + (z - point2[2]) * perp1to20[2]
     ]))
     return equations
+
+def get_cylinder_equation(ray_through: np.array, radius: float, reverse_normal: bool, rotation: Rotation) -> list[SurfaceEquation]:
+    equations = []
+    basic_equation = (x ** 2 + y ** 2 - radius ** 2) if not reverse_normal else (-1 * x ** 2 - y ** 2 + radius ** 2)
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Cylinder, apply_rotation_move(basic_equation, ray_through, rotation), []))
+    return equations
+
+# add_part = 0 then it is cone
+# add_part < 0 then it is one parted hyperboloid
+# add_part > 0 then it is two parted hyperboloid
+def get_paraboloid_equation(add_part: float, reverse_normal: bool, center_at: np.array, rotation: Rotation) -> list[SurfaceEquation]:
+    equations = []
+    basic_equation = (x ** 2 + y ** 2 - z ** 2 + add_part) if not reverse_normal else (-1 * x ** 2 - y ** 2 + z ** 2 - add_part)
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Paraboloid, apply_rotation_move(basic_equation, center_at, rotation), []))
+    return equations
+

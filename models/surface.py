@@ -21,6 +21,8 @@ class SurfaceEquation:
     class EquationType(Enum):
         Sphere = 0,
         Plane = 1,
+        Cylinder = 2,
+        Paraboloid = 3
 
     equation_type: EquationType
     _solver: Callable[[Ray], float]
@@ -35,8 +37,12 @@ class SurfaceEquation:
             self._solver = self._solve_sphere
         elif equation_type == self.EquationType.Plane:
             self._solver = self._solve_plane
+        elif equation_type == self.EquationType.Cylinder:
+            self._solver = self._solve_cylinder
+        elif equation_type == self.EquationType.Paraboloid:
+            self._solver = self._solve_paraboloid
 
-        if equation_type in [self.EquationType.Sphere, self.EquationType.Plane]:
+        if equation_type in [self.EquationType.Sphere, self.EquationType.Plane, self.EquationType.Cylinder, self.EquationType.Paraboloid]:
             ax, bx, ay, by, az, bz = symbols('ax, bx, ay, by, az, bz')
             coef_lambdas = [lambdify([ax, bx, ay, by, az, bz], coef_equation) for coef_equation in Poly(equation.subs([(x, ax + bx * t), (y, ay + by * t), (z, az + bz * t)]), t).all_coeffs()]
             self._ray_to_polynom = lambda px, vx, py, vy, pz, vz: [coef_lambda(px, vx, py, vy, pz, vz) for coef_lambda in coef_lambdas]
@@ -57,6 +63,12 @@ class SurfaceEquation:
         return self._solve_by_poly_roots(ray)
 
     def _solve_plane(self, ray: Ray) -> float:
+        return self._solve_by_poly_roots(ray)
+
+    def _solve_cylinder(self, ray: Ray) -> float:
+        return self._solve_by_poly_roots(ray)
+
+    def _solve_paraboloid(self, ray: Ray) -> float:
         return self._solve_by_poly_roots(ray)
 
     def _solve_by_poly_roots(self, ray: Ray) -> float:
