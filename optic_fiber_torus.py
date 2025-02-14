@@ -15,17 +15,12 @@ camera = Camera(np.array([-4.1, -0.5, camera_height], dtype=float),
 surfaces = []
 surfaces.append(SolidSurface(get_sphere_equations(np.array([0, 0, 0]), 100), np.array([1, 1, 1]), 0.2))
 
-radius_outer = 8.37947 * 0.5
-radius_inner = 2.98932
-height_half = 1.41247 * 0.5
+radius_main = 3.61
+radius_cut = 1.19763 * 0.5
 fiber_equations = [
-    *get_cylinder_equation(np.array([0, 0, 0]), radius_outer, False, Rotation.from_rotvec([90, 0, 0], degrees=True), [y - height_half, -y - height_half, z]),
-    *get_cylinder_equation(np.array([0, 0, 0]), radius_inner, True, Rotation.from_rotvec([90, 0, 0], degrees=True),
-                           [y - height_half, -y - height_half, z]),
-    SurfaceEquation(SurfaceEquation.EquationType.Plane, y - height_half, [z, x ** 2 + z ** 2 - radius_outer ** 2, -1 * x ** 2 - z ** 2 + radius_inner ** 2]),
-    SurfaceEquation(SurfaceEquation.EquationType.Plane, -y - height_half, [z, x ** 2 + z ** 2 - radius_outer ** 2, -1 * x ** 2 - z ** 2 + radius_inner ** 2]),
-    SurfaceEquation(SurfaceEquation.EquationType.Plane, z, [y - height_half, -y - height_half, x - radius_outer, -x + radius_inner]),
-    SurfaceEquation(SurfaceEquation.EquationType.Plane, z,[y - height_half, -y - height_half, -x - radius_outer, x + radius_inner])
+    SurfaceEquation(SurfaceEquation.EquationType.Torus, apply_rotation_move((x**2 + y**2 + z**2 + radius_main ** 2 - radius_cut ** 2) ** 2 - 4 * radius_main ** 2 * (x ** 2 + y ** 2), np.array([0, 0, 0]), Rotation.from_rotvec([90, 0, 0], degrees=True)), [z]),
+    SurfaceEquation(SurfaceEquation.EquationType.Plane, z, [apply_rotation_move(x ** 2 + y ** 2 - radius_cut ** 2, np.array([radius_main, 0, 0]), Rotation.from_rotvec([0, 0, 0]))]),
+    SurfaceEquation(SurfaceEquation.EquationType.Plane, z,[apply_rotation_move(x ** 2 + y ** 2 - radius_cut ** 2, np.array([-radius_main, 0, 0]), Rotation.from_rotvec([0, 0, 0]))])
 ]
 
 # surfaces.append(SolidSurface(fiber_equations, np.array([1, 0, 0]), 1))
@@ -40,4 +35,4 @@ surfaces.append(SolidSurface([
 ], np.array([0, 1, 0]), 1))
 
 
-render_scene("optic_fiber.png", surfaces, camera, 100, 100, 1)
+render_scene("optic_fiber_torus.png", surfaces, camera, 100, 100, 1)

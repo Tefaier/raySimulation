@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from control_functions import shoot_ray
 from models.primitives import get_cube_equations, get_sphere_equations, get_triangle_equation, get_cylinder_equation, \
-    get_paraboloid_equation
+    get_hyperboloid_equation
 from models.surface import ReflectionSurface, RefractionSurface, SolidSurface, SurfaceEquation
 from models.ray import Ray
 from sympy.abc import x, y, z

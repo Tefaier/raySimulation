@@ -84,10 +84,15 @@ def get_cylinder_equation(ray_through: np.array, radius: float, reverse_normal: 
 # add_part < 0 then it is one parted hyperboloid
 # add_part > 0 then it is two parted hyperboloid
 # angle_between_axis in degrees
-def get_paraboloid_equation(add_part: float, angle_between_axis: float, reverse_normal: bool, center_at: np.array, rotation: Rotation, extra_limitations: list = []) -> list[SurfaceEquation]:
+def get_hyperboloid_equation(add_part: float, angle_between_axis: float, reverse_normal: bool, center_at: np.array, rotation: Rotation, extra_limitations: list = []) -> list[SurfaceEquation]:
     multiplier = math.tan(math.radians(angle_between_axis * 0.5))
     equations = []
     basic_equation = (x ** 2 + y ** 2 - (multiplier * z) ** 2 + add_part) if not reverse_normal else (-1 * x ** 2 - y ** 2 + (multiplier * z) ** 2 - add_part)
-    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Paraboloid, apply_rotation_move(basic_equation, center_at, rotation), extra_limitations))
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Hyperboloid, apply_rotation_move(basic_equation, center_at, rotation), extra_limitations))
     return equations
 
+def get_paraboloid_equation(x_y_multiplier: float, reverse_normal: bool, center_at: np.array, rotation: Rotation, extra_limitations: list = []) -> list[SurfaceEquation]:
+    equations = []
+    basic_equation = (x ** 2 + y ** 2 - z * x_y_multiplier ** 2) if not reverse_normal else (-1 * x ** 2 - y ** 2 + z * x_y_multiplier ** 2)
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Paraboloid, apply_rotation_move(basic_equation, center_at, rotation), extra_limitations))
+    return equations

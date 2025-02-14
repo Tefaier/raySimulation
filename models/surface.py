@@ -22,7 +22,9 @@ class SurfaceEquation:
         Sphere = 0,
         Plane = 1,
         Cylinder = 2,
-        Paraboloid = 3
+        Hyperboloid = 3,
+        Torus = 4,
+        Paraboloid = 5
 
     equation_type: EquationType
     _solver: Callable[[Ray], float]
@@ -39,10 +41,14 @@ class SurfaceEquation:
             self._solver = self._solve_plane
         elif equation_type == self.EquationType.Cylinder:
             self._solver = self._solve_cylinder
+        elif equation_type == self.EquationType.Hyperboloid:
+            self._solver = self._solve_hyperboloid
+        elif equation_type == self.EquationType.Torus:
+            self._solver = self._solve_torus
         elif equation_type == self.EquationType.Paraboloid:
             self._solver = self._solve_paraboloid
 
-        if equation_type in [self.EquationType.Sphere, self.EquationType.Plane, self.EquationType.Cylinder, self.EquationType.Paraboloid]:
+        if equation_type in [self.EquationType.Sphere, self.EquationType.Plane, self.EquationType.Cylinder, self.EquationType.Hyperboloid, self.EquationType.Torus, self.EquationType.Paraboloid]:
             ax, bx, ay, by, az, bz = symbols('ax, bx, ay, by, az, bz')
             coef_lambdas = [lambdify([ax, bx, ay, by, az, bz], coef_equation) for coef_equation in Poly(equation.subs([(x, ax + bx * t), (y, ay + by * t), (z, az + bz * t)]), t).all_coeffs()]
             self._ray_to_polynom = lambda px, vx, py, vy, pz, vz: [coef_lambda(px, vx, py, vy, pz, vz) for coef_lambda in coef_lambdas]
@@ -67,6 +73,12 @@ class SurfaceEquation:
         return self._solve_by_poly_roots(ray)
 
     def _solve_cylinder(self, ray: Ray) -> float:
+        return self._solve_by_poly_roots(ray)
+
+    def _solve_hyperboloid(self, ray: Ray) -> float:
+        return self._solve_by_poly_roots(ray)
+
+    def _solve_torus(self, ray: Ray) -> float:
         return self._solve_by_poly_roots(ray)
 
     def _solve_paraboloid(self, ray: Ray) -> float:
