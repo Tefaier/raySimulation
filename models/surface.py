@@ -57,7 +57,8 @@ class SurfaceEquation:
         return self._solver(ray)
 
     def get_normal_at_point(self, at_point: np.array) -> np.array:
-        return np.array(self._surface_normal(at_point[0], at_point[1], at_point[2]))
+        normal = np.array(self._surface_normal(at_point[0], at_point[1], at_point[2]))
+        return normal / np.linalg.norm(normal)
 
     def _solve_sphere(self, ray: Ray) -> float:
         return self._solve_by_poly_roots(ray)

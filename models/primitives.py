@@ -1,3 +1,4 @@
+import math
 from typing import Tuple
 
 import numpy as np
@@ -50,9 +51,9 @@ def get_cube_equations(center_at: np.array, side_lengths: Tuple[float, float, fl
     return equations
 
 # simple sphere
-def get_sphere_equations(center_at: np.array, radius: float) -> list[SurfaceEquation]:
+def get_sphere_equations(center_at: np.array, radius: float, extra_limitations: list = []) -> list[SurfaceEquation]:
     equations = []
-    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Sphere, (x-center_at[0])**2+(y-center_at[1])**2+(z-center_at[2])**2-radius*radius, []))
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Sphere, (x-center_at[0])**2+(y-center_at[1])**2+(z-center_at[2])**2-radius*radius, extra_limitations))
     return equations
 
 # triangle in 3D, considers outside to be where points 0->1->2 are seen in CW order
@@ -73,18 +74,20 @@ def get_triangle_equation(point0: np.array, point1: np.array, point2: np.array) 
     ]))
     return equations
 
-def get_cylinder_equation(ray_through: np.array, radius: float, reverse_normal: bool, rotation: Rotation) -> list[SurfaceEquation]:
+def get_cylinder_equation(ray_through: np.array, radius: float, reverse_normal: bool, rotation: Rotation, extra_limitations: list = []) -> list[SurfaceEquation]:
     equations = []
     basic_equation = (x ** 2 + y ** 2 - radius ** 2) if not reverse_normal else (-1 * x ** 2 - y ** 2 + radius ** 2)
-    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Cylinder, apply_rotation_move(basic_equation, ray_through, rotation), []))
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Cylinder, apply_rotation_move(basic_equation, ray_through, rotation), extra_limitations))
     return equations
 
 # add_part = 0 then it is cone
 # add_part < 0 then it is one parted hyperboloid
 # add_part > 0 then it is two parted hyperboloid
-def get_paraboloid_equation(add_part: float, reverse_normal: bool, center_at: np.array, rotation: Rotation) -> list[SurfaceEquation]:
+# angle_between_axis in degrees
+def get_paraboloid_equation(add_part: float, angle_between_axis: float, reverse_normal: bool, center_at: np.array, rotation: Rotation, extra_limitations: list = []) -> list[SurfaceEquation]:
+    multiplier = math.tan(math.radians(angle_between_axis * 0.5))
     equations = []
-    basic_equation = (x ** 2 + y ** 2 - z ** 2 + add_part) if not reverse_normal else (-1 * x ** 2 - y ** 2 + z ** 2 - add_part)
-    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Paraboloid, apply_rotation_move(basic_equation, center_at, rotation), []))
+    basic_equation = (x ** 2 + y ** 2 - (multiplier * z) ** 2 + add_part) if not reverse_normal else (-1 * x ** 2 - y ** 2 + (multiplier * z) ** 2 - add_part)
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Paraboloid, apply_rotation_move(basic_equation, center_at, rotation), extra_limitations))
     return equations
 
