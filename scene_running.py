@@ -41,7 +41,7 @@ def render_scene(file_name: str, surfaces: list[Surface], camera: Camera, width:
         # start_time = time.time()
         for j in range(height // step):
             point = camera.A + d_x * i + d_y * j
-            ray = Ray(point, point - camera.fov_pos)
+            ray = Ray(camera.fov_pos, point - camera.fov_pos)
             path, ray = shoot_ray(surfaces, ray, 100)
             if ray.finished:
                 screen.set_at((i * step, height - j * step), tuple(map(int, ray.final_color * 255)))
