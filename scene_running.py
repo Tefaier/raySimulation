@@ -3,6 +3,7 @@ import numpy as np
 import pygame
 from scipy.spatial.transform import Rotation
 from tqdm import tqdm
+import time
 
 from control_functions import shoot_ray
 from models.primitives import get_cube_equations, get_sphere_equations, get_triangle_equation, get_cylinder_equation, \
@@ -26,6 +27,7 @@ class Camera:
 
 def render_scene(file_name: str, surfaces: list[Surface], camera: Camera, width: int, height: int, step: int):
     screen = pygame.display.set_mode((width, height))
+    clock = pygame.time.Clock()
     p_bar = tqdm(range(int(width * height / step / step)))
 
     def cast_ray(ray: Ray):
@@ -48,10 +50,11 @@ def render_scene(file_name: str, surfaces: list[Surface], camera: Camera, width:
             p_bar.update()
             p_bar.refresh()
         # print(f"{i}/{width // step_x} width iteration taked {time.time() - start_time:.2f} seconds")
+        pygame.event.get()
+        pygame.display.update((i, 0, 1, height))
 
     pygame.display.flip()
     pygame.image.save(screen, file_name)
-    clock = pygame.time.Clock()
     running = True
 
     while running:

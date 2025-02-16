@@ -40,4 +40,4 @@ surfaces.append(SolidSurface([
 ], np.array([0, 1, 0]), 1))
 
 
-render_scene("optic_fiber.png", surfaces, camera, 100, 100, 1)
+render_scene("optic_fiber.png", surfaces, camera, 1000, 1000, 1)

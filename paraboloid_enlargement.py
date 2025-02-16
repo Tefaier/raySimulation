@@ -11,7 +11,7 @@ from sympy.abc import x, y, z
 
 from utils import apply_rotation_move
 
-desired_enlargement = 0.25
+desired_enlargement = 0.02
 camera_height = 1 / (4 * desired_enlargement)
 camera = Camera(np.array([-0.5, -0.5, camera_height-0.5], dtype=float),
                 np.array([-0.5, 0.5, camera_height-0.5]),
@@ -33,4 +33,4 @@ surfaces.append(SolidSurface([
 ], np.array([0, 1, 1]), 1))
 
 
-render_scene(f"paraboloid_{desired_enlargement}.png", surfaces, camera, 100, 100, 1)
+render_scene(f"paraboloid_{desired_enlargement}.png", surfaces, camera, 400, 400, 1)
