@@ -96,3 +96,18 @@ def get_paraboloid_equation(x_y_multiplier: float, reverse_normal: bool, center_
     basic_equation = (x ** 2 + y ** 2 - z * x_y_multiplier ** 2) if not reverse_normal else (-1 * x ** 2 - y ** 2 + z * x_y_multiplier ** 2)
     equations.append(SurfaceEquation(SurfaceEquation.EquationType.Paraboloid, apply_rotation_move(basic_equation, center_at, rotation), extra_limitations))
     return equations
+
+
+def get_converging_lens_equations(center_at: np.array, height: float, rotation: Rotation, sphere_radius: float = 500, extra_limitations: list = []) -> list[SurfaceEquation]:
+    center_1 = center_at - np.array([math.sqrt(sphere_radius ** 2 - (height / 2) ** 2), 0, 0])
+    center_2 = center_at + np.array([math.sqrt(sphere_radius ** 2 - (height / 2) ** 2), 0, 0])
+    equations = []
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Sphere,
+                                     apply_rotation_move((x-center_1[0])**2+(y-center_1[1])**2+(z-center_1[2])**2-sphere_radius**2, center_at, rotation),
+                                     [apply_rotation_move((x-center_2[0])**2+(y-center_2[1])**2+(z-center_2[2])**2-sphere_radius**2, center_at, rotation)]
+                                     + extra_limitations))
+    equations.append(SurfaceEquation(SurfaceEquation.EquationType.Sphere,
+                                     apply_rotation_move((x-center_2[0])**2+(y-center_2[1])**2+(z-center_2[2])**2-sphere_radius**2, center_at, rotation),
+                                     [apply_rotation_move((x-center_1[0])**2+(y-center_1[1])**2+(z-center_1[2])**2-sphere_radius**2, center_at, rotation)]
+                                     + extra_limitations))
+    return equations
