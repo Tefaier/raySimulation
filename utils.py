@@ -119,3 +119,54 @@ def apply_rotation_move(equation, move_to: np.array, rotation: Rotation):
     new_basis = [rotation.apply([1, 0, 0]), rotation.apply([0, 1, 0]), rotation.apply([0, 0, 1])]
     new_basis = [xn * base[0] + yn * base[1] + zn * base[2] for base in new_basis]
     return equation.subs([(x, new_basis[0]), (y, new_basis[1]), (z, new_basis[2])], simultanious=True).subs([(xn, x - move_to[0]), (yn, y - move_to[1]), (zn, z - move_to[2])], simultanious=True)
+
+def build_spectrum_split(split_number: int) -> np.array:
+    if split_number == 1: return np.array([[600, 1, 1, 1]])
+    result = []
+    wavelengths = np.linspace(400, 730, split_number)
+    for wavelength in wavelengths:
+        if wavelength >= 380 and wavelength <= 440:
+            attenuation = 0.3 + 0.7 * (wavelength - 380) / (440 - 380)
+            R = ((-(wavelength - 440) / (440 - 380)) * attenuation)
+            G = 0.0
+            B = (1.0 * attenuation)
+        elif wavelength >= 440 and wavelength <= 490:
+            R = 0.0
+            G = ((wavelength - 440) / (490 - 440))
+            B = 1.0
+        elif wavelength >= 490 and wavelength <= 510:
+            R = 0.0
+            G = 1.0
+            B = (-(wavelength - 510) / (510 - 490))
+        elif wavelength >= 510 and wavelength <= 580:
+            R = ((wavelength - 510) / (580 - 510))
+            G = 1.0
+            B = 0.0
+        elif wavelength >= 580 and wavelength <= 645:
+            R = 1.0
+            G = (-(wavelength - 645) / (645 - 580))
+            B = 0.0
+        elif wavelength >= 645 and wavelength <= 750:
+            attenuation = 0.3 + 0.7 * (750 - wavelength) / (750 - 645)
+            R = (1.0 * attenuation)
+            G = 0.0
+            B = 0.0
+        else:
+            R = 0.0
+            G = 0.0
+            B = 0.0
+        result.append([wavelength, R, G, B])
+    result = np.array(result)
+    for i in range(1, 4):
+        c_sum = result[:, i].sum()
+        if c_sum == 0:
+            result[:, i] = 1 / split_number
+        else:
+            result[:, i] /= c_sum
+    return result
+
+# for glass 1.0396, 6000, 0.2318, 20000
+# for air 0, 0
+def sellmeier_lambda(B1: float, C1: float, B2: float = 0, C2: float = 0) -> Callable[[float], float]:
+    return lambda alpha: math.sqrt(1 + B1 / (1 - C1 / (alpha * alpha)) + B2 / (1 - C2 / (alpha * alpha)))
+
